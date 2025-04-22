@@ -18,6 +18,10 @@ st.set_page_config(
 # Initialize session state variables
 if 'running' not in st.session_state:
     st.session_state.running = False
+if 'face_model' not in st.session_state:
+    st.session_state.face_model = None
+if 'model_loaded' not in st.session_state:
+    st.session_state.model_loaded = False
 
 def apply_label_to_frame(frame, label, confidence):
     """Apply prediction label to the video frame"""
@@ -68,14 +72,17 @@ def main():
     model_path = model_options[selected_model]
     
     # Load the model
-    with st.spinner("Loading model..."):
-        face_model = FaceAntiSpoofModel(model_path)
-        
-        if face_model.model is None:
-            st.error("Failed to load model. Please check model path and try again.")
-            return
+    if not st.session_state.model_loaded:
+        with st.spinner("Loading model..."):
+            st.session_state.face_model = FaceAntiSpoofModel(model_path)
+            
+            if st.session_state.face_model.model is None:
+                st.error("Failed to load model. Please check model path and try again.")
+                return
+            
+            st.session_state.model_loaded = True
     
-    st.success("Model loaded successfully!")
+        st.success("Model loaded successfully!")
     
     # Create start/stop buttons
     col1, col2 = st.columns(2)
@@ -124,7 +131,7 @@ def main():
         # If face detected, predict whether it's real or fake
         if face_roi is not None:
             # Predict
-            label, confidence = face_model.predict(face_roi)
+            label, confidence = st.session_state.face_model.predict(face_roi)
             
             # Apply label to frame
             frame_with_label = apply_label_to_frame(frame_with_rect, label, confidence)
